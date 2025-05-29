@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
-
-
-const API_URL = 'http://localhost:3001/schedules';
+import { database } from '../firebase.js';
+import { ref, get, set, remove, onValue } from 'firebase/database';
 
 const UniversityRoomScheduler = () => {
   // State management
@@ -58,99 +57,111 @@ const UniversityRoomScheduler = () => {
     return slots;
   };
 
-  // Transform API schedule array to object for easier use
-  const transformApiScheduleToObject = (apiSchedules) => {
-    const obj = {};
-    apiSchedules.forEach(item => {
-      obj[item.roomId] = item.bookings || {};
-    });
-    return obj;
-  };
-
-  // Transform schedule object to API format array
-  const transformScheduleObjectToApi = (scheduleObj) => {
-    const arr = [];
-    for (const roomId in scheduleObj) {
-      arr.push({
-        id: roomId, // use roomId as id for JSON server
-        roomId,
-        bookings: scheduleObj[roomId]
-      });
-    }
-    return arr;
-  };
-
-  // Load schedules from JSON server API
+  // Load schedules from Firebase
   const loadSchedules = async () => {
     setLoading(true);
     try {
-      const response = await fetch(API_URL);
-      if (!response.ok) throw new Error('Failed to fetch schedules');
-      const data = await response.json();
-      const transformed = transformApiScheduleToObject(data);
-      setSchedule(transformed);
+      const schedulesRef = ref(database, 'schedules');
+      const snapshot = await get(schedulesRef);
+      
+      if (snapshot.exists()) {
+        const data = snapshot.val();
+        // Transform Firebase data to the format our app expects
+        const transformedSchedule = {};
+        Object.keys(data).forEach(roomId => {
+          transformedSchedule[roomId] = data[roomId].bookings || {};
+        });
+        setSchedule(transformedSchedule);
+      } else {
+        console.log('No schedule data found in Firebase');
+        setSchedule({});
+      }
     } catch (error) {
+      console.error('Error loading schedules from Firebase:', error);
       alert('Error loading schedules: ' + error.message);
     }
     setLoading(false);
   };
 
-  // Save full schedule state to JSON server API
-  const saveSchedulesToApi = async (newSchedule) => {
-    setLoading(true);
+  // Save schedule to Firebase
+  const saveScheduleToFirebase = async (roomId, bookings) => {
     try {
-      // JSON server does not support batch updates, so update each room resource individually
-      // We'll do PUT to /schedules/:id for each room to update bookings
-      const updatePromises = Object.entries(newSchedule).map(async ([roomId, bookings]) => {
-        // Check if the resource exists via GET:
-        const resGet = await fetch(`${API_URL}/${roomId}`);
-        if (resGet.ok) {
-          // Resource exists, update via PUT
-          const resPut = await fetch(`${API_URL}/${roomId}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id: roomId, roomId, bookings })
-          });
-          if (!resPut.ok) {
-            throw new Error(`Failed to update schedule for room ${roomId}`);
-          }
-        } else {
-          // Resource does not exist, create via POST
-          const resPost = await fetch(API_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id: roomId, roomId, bookings })
-          });
-          if (!resPost.ok) {
-            throw new Error(`Failed to create schedule for room ${roomId}`);
-          }
-        }
+      const roomRef = ref(database, `schedules/${roomId}`);
+      await set(roomRef, {
+        id: roomId,
+        roomId: roomId,
+        bookings: bookings
       });
-
-      // Also check for rooms removed entirely (no bookings in newSchedule) and delete from server
-      // First get current ids from server to compare
-      const resCurrent = await fetch(API_URL);
-      const currentRooms = await resCurrent.json();
-      const currentIds = currentRooms.map(r => r.id);
-      const newIds = Object.keys(newSchedule);
-      const idsToDelete = currentIds.filter(id => !newIds.includes(id));
-
-      const deletePromises = idsToDelete.map(async (id) => {
-        const resDel = await fetch(`${API_URL}/${id}`, {
-          method: 'DELETE'
-        });
-        if (!resDel.ok) {
-          throw new Error(`Failed to delete schedule for room ${id}`);
-        }
-      });
-
-      await Promise.all([...updatePromises, ...deletePromises]);
-      setLoading(false);
     } catch (error) {
-      setLoading(false);
-      alert('Error saving schedules: ' + error.message);
+      console.error('Error saving to Firebase:', error);
+      throw error;
     }
   };
+
+  // Delete room schedule from Firebase
+  const deleteRoomFromFirebase = async (roomId) => {
+    try {
+      const roomRef = ref(database, `schedules/${roomId}`);
+      await remove(roomRef);
+    } catch (error) {
+      console.error('Error deleting from Firebase:', error);
+      throw error;
+    }
+  };
+
+  // Save full schedule state to Firebase
+  const saveSchedulesToFirebase = async (newSchedule) => {
+    setLoading(true);
+    try {
+      const savePromises = Object.entries(newSchedule).map(([roomId, bookings]) => 
+        saveScheduleToFirebase(roomId, bookings)
+      );
+
+      // Handle deleted rooms - get current data from Firebase and compare
+      const schedulesRef = ref(database, 'schedules');
+      const snapshot = await get(schedulesRef);
+      
+      if (snapshot.exists()) {
+        const currentData = snapshot.val();
+        const currentRoomIds = Object.keys(currentData);
+        const newRoomIds = Object.keys(newSchedule);
+        const roomsToDelete = currentRoomIds.filter(id => !newRoomIds.includes(id));
+        
+        const deletePromises = roomsToDelete.map(roomId => deleteRoomFromFirebase(roomId));
+        
+        await Promise.all([...savePromises, ...deletePromises]);
+      } else {
+        await Promise.all(savePromises);
+      }
+
+    } catch (error) {
+      alert('Error saving schedules: ' + error.message);
+    }
+    setLoading(false);
+  };
+
+  // Set up real-time listener for Firebase data changes
+  useEffect(() => {
+    const schedulesRef = ref(database, 'schedules');
+    
+    const unsubscribe = onValue(schedulesRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const data = snapshot.val();
+        const transformedSchedule = {};
+        Object.keys(data).forEach(roomId => {
+          transformedSchedule[roomId] = data[roomId].bookings || {};
+        });
+        setSchedule(transformedSchedule);
+      } else {
+        setSchedule({});
+      }
+    }, (error) => {
+      console.error('Firebase listener error:', error);
+    });
+
+    // Cleanup listener on component unmount
+    return () => unsubscribe();
+  }, []);
 
   // Check if a time slot is occupied by a class
   const isTimeSlotOccupied = (roomId, day, time) => {
@@ -232,7 +243,7 @@ const UniversityRoomScheduler = () => {
         }
       }
       setSchedule(newSchedule);
-      await saveSchedulesToApi(newSchedule);
+      await saveSchedulesToFirebase(newSchedule);
 
       // Reset form and editing state
       handleCancelEditing();
@@ -293,7 +304,7 @@ const UniversityRoomScheduler = () => {
     };
 
     setSchedule(newSchedule);
-    await saveSchedulesToApi(newSchedule);
+    await saveSchedulesToFirebase(newSchedule);
 
     // Reset form
     handleCancelEditing();
@@ -314,7 +325,7 @@ const UniversityRoomScheduler = () => {
         }
       }
       setSchedule(newSchedule);
-      saveSchedulesToApi(newSchedule).then(() => {
+      saveSchedulesToFirebase(newSchedule).then(() => {
         proceedWithScheduling();
       }).catch(err => {
         alert('Error replacing existing schedule: ' + err.message);
@@ -358,11 +369,6 @@ const UniversityRoomScheduler = () => {
     // No conflicts, proceed with scheduling
     proceedWithScheduling();
   };
-
-  // Load schedules when component mounts
-  useEffect(() => {
-    loadSchedules();
-  }, []);
 
   // Handle building selection
   const handleBuildingSelect = (buildingId) => {
@@ -729,4 +735,3 @@ const UniversityRoomScheduler = () => {
 };
 
 export default UniversityRoomScheduler;
-

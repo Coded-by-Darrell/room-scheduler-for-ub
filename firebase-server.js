@@ -1,7 +1,6 @@
-// src/firebase.js
+// firebase-server.js - Server-only Firebase config (no analytics)
 import { initializeApp } from "firebase/app";
 import { getDatabase } from "firebase/database";
-import { getAnalytics, isSupported } from "firebase/analytics";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAYAbK11Z6hVqj3YmuQSfjN-XcG_F-Gpi0",
@@ -17,14 +16,4 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const database = getDatabase(app);
 
-// Only initialize analytics if supported (browser environment)
-let analytics = null;
-if (typeof window !== 'undefined') {
-  isSupported().then((supported) => {
-    if (supported) {
-      analytics = getAnalytics(app);
-    }
-  });
-}
-
-export { app, analytics, database };
+export { app, database };
