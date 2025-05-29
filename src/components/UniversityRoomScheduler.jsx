@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
+
 const API_URL = 'http://localhost:3001/schedules';
 
 const UniversityRoomScheduler = () => {
@@ -25,10 +26,12 @@ const UniversityRoomScheduler = () => {
   // Building data
   const buildings = [
     { id: 'A', name: 'Building' },
+    { id: 'D', name: 'Building' },
     { id: 'E', name: 'Building' },
     { id: 'F', name: 'Building' },
     { id: 'H', name: 'Building' },
-    { id: 'I', name: 'Building' }
+    { id: 'I', name: 'Building' },
+    { id: 'K', name: 'Building' },
   ];
 
   // Floors and rooms data

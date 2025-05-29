@@ -1,3 +1,24 @@
 {
-  "schedules": []
+  "schedules": [
+    {
+      "id": "A101",
+      "roomId": "A101",
+      "bookings": {
+        "Monday-7:00": {
+          "courseName": "Math",
+          "section": "CpE 3-1",
+          "professorName": "Engr. Christian Caballero",
+          "startTime": "7:00",
+          "endTime": "8:00"
+        },
+        "Monday-9:00": {
+          "courseName": "Programming",
+          "section": "Cpe 3-1",
+          "professorName": "Engr. Derrick Ramos",
+          "startTime": "9:00",
+          "endTime": "11:00"
+        }
+      }
+    }
+  ]
 }
