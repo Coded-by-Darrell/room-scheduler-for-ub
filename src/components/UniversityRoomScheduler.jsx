@@ -6,6 +6,7 @@ const UniversityRoomScheduler = () => {
   // State management
   const [selectedBuilding, setSelectedBuilding] = useState(null);
   const [selectedFloor, setSelectedFloor] = useState(null);
+  const [currentPage, setCurrentPage] = useState('home');
   const [selectedRoom, setSelectedRoom] = useState(null);
   const [courseData, setCourseData] = useState({
     courseName: '',
@@ -297,10 +298,10 @@ const UniversityRoomScheduler = () => {
     }
     newSchedule[roomId][timeSlot] = {
       courseName: courseData.courseName,
-      section: courseData.section,
+      endTime: courseData.endTime,
       professorName: courseData.professorName,
-      startTime: courseData.startTime,
-      endTime: courseData.endTime
+      section: courseData.section,
+      startTime: courseData.startTime
     };
 
     setSchedule(newSchedule);
@@ -327,6 +328,14 @@ const UniversityRoomScheduler = () => {
       setSchedule(newSchedule);
       saveSchedulesToFirebase(newSchedule).then(() => {
         proceedWithScheduling();
+        
+        // ADD THIS: Close modal and redirect to home after replacing
+        setShowConflictModal(false);
+        setConflictData(null);
+        setSelectedBuilding(null);
+        setSelectedFloor(null);
+        setSelectedRoom(null);
+        
       }).catch(err => {
         alert('Error replacing existing schedule: ' + err.message);
         setShowConflictModal(false);
@@ -708,17 +717,28 @@ const UniversityRoomScheduler = () => {
                       ))}
                     </select>
                   </div>
-                  <button
-                    onClick={handleScheduleRoom}
-                    disabled={loading}
-                    className={`w-full py-2 px-4 rounded font-medium transition-colors ${
-                      loading
-                        ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
-                        : 'bg-blue-600 text-white hover:bg-blue-700'
-                    }`}
-                  >
-                    {loading ? 'Saving...' : editingSchedule ? 'Update Schedule' : 'Schedule Room'}
-                  </button>
+                  <div className="flex space-x-2">
+                      <button
+                        onClick={handleScheduleRoom}
+                        disabled={loading}
+                        className={`flex-1 py-2 px-4 rounded font-medium transition-colors ${
+                          loading
+                            ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                            : 'bg-blue-600 text-white hover:bg-blue-700'
+                        }`}
+                      >
+                        {loading ? 'Saving...' : editingSchedule ? 'Update Schedule' : 'Schedule Room'}
+                      </button>
+                      
+                      {editingSchedule && (
+                        <button
+                          onClick={handleCancelEditing}
+                          className="flex-1 bg-gray-500 text-white py-2 px-4 rounded hover:bg-gray-600 transition-colors"
+                        >
+                          Cancel
+                        </button>
+                      )}
+                    </div>
                 </div>
               </div>
             </div>
