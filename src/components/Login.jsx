@@ -21,7 +21,7 @@ const Login = ({ onLogin }) => {
     'student2': { password: 'student123', role: 'student', name: 'Maria Clara' },
     
     // Faculty
-    'faculty1': { password: 'faculty123', role: 'faculty', name: 'ENGR> Derrick Ramos' },
+    'faculty1': { password: 'faculty123', role: 'faculty', name: 'ENGR. Derrick Ramos' },
     'faculty2': { password: 'faculty123', role: 'faculty', name: 'Prof. Andres Bonifacio' },
   };
 
@@ -68,21 +68,22 @@ const Login = ({ onLogin }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-white flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      {/* Login Content */}
       <div className="max-w-md w-full space-y-8">
         {/* Header */}
         <div className="text-center">
-          <div className="mx-auto h-20 w-20 bg-red-900 rounded-full flex items-center justify-center mb-4">
+          <div className="mx-auto h-20 w-20 bg-white rounded-full flex items-center justify-center mb-4">
             <img src="/src/assets/UBlogo.png" alt="UB Logo" className="w-full h-full object-cover rounded-full" />
           </div>
           <h2 className="text-3xl font-bold text-red-900">University Room Scheduler</h2>
-          <p className="mt-2 text-sm text-gray-600">Sign in to access the room scheduling system</p>
+          <p className="mt-2 text-sm text-black">Sign in to access the room scheduling system</p>
         </div>
 
-        {/* Login Form */}
-        <form className="mt-8 space-y-6 bg-white p-8 rounded-lg shadow-md" onSubmit={handleSubmit}>
+        {/* Login Form with minimalist shadow */}
+        <form className="mt-8 space-y-6 bg-white p-8 rounded-lg shadow-sm" onSubmit={handleSubmit}>
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded relative">
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
               <span className="block sm:inline">{error}</span>
             </div>
           )}
@@ -99,7 +100,7 @@ const Login = ({ onLogin }) => {
                 required
                 value={credentials.username}
                 onChange={handleInputChange}
-                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-red-500 focus:border-red-500 focus:z-10 sm:text-sm"
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 sm:text-sm"
                 placeholder="Enter your username"
               />
             </div>
@@ -115,7 +116,7 @@ const Login = ({ onLogin }) => {
                 required
                 value={credentials.password}
                 onChange={handleInputChange}
-                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-red-500 focus:border-red-500 focus:z-10 sm:text-sm"
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 sm:text-sm"
                 placeholder="Enter your password"
               />
             </div>
@@ -129,7 +130,7 @@ const Login = ({ onLogin }) => {
                 name="role"
                 value={credentials.role}
                 onChange={handleInputChange}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 sm:text-sm"
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 sm:text-sm"
               >
                 <option value="student">Student</option>
                 <option value="faculty">Faculty</option>
@@ -155,14 +156,16 @@ const Login = ({ onLogin }) => {
                 </svg>
               ) : (
                 <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path>
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013 3v1"></path>
                 </svg>
               )}
               {loading ? 'Signing in...' : 'Sign in'}
             </button>
           </div>
 
-  
+        
+           
+          
         </form>
       </div>
     </div>

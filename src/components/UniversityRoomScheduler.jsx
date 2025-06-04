@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { database } from '../firebase.js';
 import { ref, get, set, remove, onValue } from 'firebase/database';
+import UserManagement from './UserManagement';
 
 const UniversityRoomScheduler = ({ user, onLogout }) => {
   // Check if user has editing permissions (only department heads)
@@ -25,6 +26,13 @@ const UniversityRoomScheduler = ({ user, onLogout }) => {
   const [showConflictModal, setShowConflictModal] = useState(false);
   const [conflictData, setConflictData] = useState(null);
   const [editingSchedule, setEditingSchedule] = useState(null);
+  const [showCreateDeptHeadModal, setShowCreateDeptHeadModal] = useState(false);
+  const [newDeptHead, setNewDeptHead] = useState({
+    username: '',
+    password: '',
+    name: ''
+  });
+  const [createError, setCreateError] = useState('');
 
   // Building data
   const buildings = [
@@ -49,6 +57,70 @@ const UniversityRoomScheduler = ({ user, onLogout }) => {
 
   // Days of the week
   const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+  // Handle creating new department head
+  const handleCreateDeptHead = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setCreateError('');
+
+    try {
+      // Get existing users from localStorage
+      const storedUsers = localStorage.getItem('systemUsers');
+      let users = storedUsers ? JSON.parse(storedUsers) : [];
+
+      // Check if username already exists
+      const existingUser = users.find(u => u.username === newDeptHead.username);
+      if (existingUser) {
+        setCreateError('Username already exists');
+        setLoading(false);
+        return;
+      }
+
+      // Create new department head
+      const userToAdd = {
+        id: Date.now(),
+        username: newDeptHead.username,
+        name: newDeptHead.name,
+        role: 'department_head',
+        createdAt: new Date().toISOString(),
+        createdBy: user.username
+      };
+
+      // Add to users array
+      users.push(userToAdd);
+      localStorage.setItem('systemUsers', JSON.stringify(users));
+
+      // Also update the mock users for login (this would be handled by your backend in production)
+      const mockUsersKey = 'mockUsers';
+      let mockUsers = {};
+      try {
+        const stored = localStorage.getItem(mockUsersKey);
+        mockUsers = stored ? JSON.parse(stored) : {};
+      } catch (e) {
+        mockUsers = {};
+      }
+
+      mockUsers[newDeptHead.username] = {
+        password: newDeptHead.password,
+        role: 'department_head',
+        name: newDeptHead.name
+      };
+
+      localStorage.setItem(mockUsersKey, JSON.stringify(mockUsers));
+
+      // Reset form and close modal
+      setNewDeptHead({ username: '', password: '', name: '' });
+      setShowCreateDeptHeadModal(false);
+      
+      alert(`Department Head account created successfully for ${newDeptHead.name}!`);
+      
+    } catch (error) {
+      setCreateError('Error creating department head account: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Helper function to get all time slots a class occupies
   const getOccupiedTimeSlots = (startTime, endTime) => {
@@ -437,6 +509,11 @@ const UniversityRoomScheduler = ({ user, onLogout }) => {
     }
   };
 
+  // Show User Management component if selected
+  if (currentPage === 'user-management') {
+    return <UserManagement user={user} onBack={() => setCurrentPage('home')} />;
+  }
+
   return (
     <div className="flex flex-col min-h-screen">
       {/* Header */}
@@ -447,6 +524,30 @@ const UniversityRoomScheduler = ({ user, onLogout }) => {
           </div>
         </div>
         <div className="flex items-center space-x-4">
+          {/* Department Head Menu */}
+          {canEdit && (
+            <div className="flex space-x-2">
+              <button
+                onClick={() => setShowCreateDeptHeadModal(true)}
+                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200 flex items-center"
+              >
+                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                </svg>
+                Create Dept Head
+              </button>
+              <button
+                onClick={() => setCurrentPage('user-management')}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200 flex items-center"
+              >
+                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
+                </svg>
+                Manage Users
+              </button>
+            </div>
+          )}
+          
           {/* User Info */}
           <div className="text-right">
             <div className="text-white font-medium">{user.name}</div>
@@ -464,6 +565,80 @@ const UniversityRoomScheduler = ({ user, onLogout }) => {
           </button>
         </div>
       </header>
+
+      {/* Create Department Head Modal */}
+      {showCreateDeptHeadModal && canEdit && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-xl max-w-md w-full mx-4">
+            <h3 className="text-lg font-bold mb-4 text-red-900">Create Department Head Account</h3>
+            {createError && (
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
+                {createError}
+              </div>
+            )}
+            <form onSubmit={handleCreateDeptHead} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Username</label>
+                <input
+                  type="text"
+                  required
+                  value={newDeptHead.username}
+                  onChange={(e) => setNewDeptHead({...newDeptHead, username: e.target.value})}
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-red-500 focus:border-red-500"
+                  placeholder="Enter username"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Full Name</label>
+                <input
+                  type="text"
+                  required
+                  value={newDeptHead.name}
+                  onChange={(e) => setNewDeptHead({...newDeptHead, name: e.target.value})}
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-red-500 focus:border-red-500"
+                  placeholder="Enter full name"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Password</label>
+                <input
+                  type="password"
+                  required
+                  value={newDeptHead.password}
+                  onChange={(e) => setNewDeptHead({...newDeptHead, password: e.target.value})}
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-red-500 focus:border-red-500"
+                  placeholder="Enter password"
+                />
+              </div>
+              <div className="bg-blue-50 p-3 rounded-md">
+                <p className="text-sm text-blue-700">
+                  <strong>Note:</strong> The new department head will have full access to create schedules, manage users, and create other department head accounts.
+                </p>
+              </div>
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="flex-1 bg-red-600 text-white py-2 px-4 rounded hover:bg-red-700 disabled:bg-red-400"
+                >
+                  {loading ? 'Creating...' : 'Create Account'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowCreateDeptHeadModal(false);
+                    setCreateError('');
+                    setNewDeptHead({ username: '', password: '', name: '' });
+                  }}
+                  className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded hover:bg-gray-400"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Access Level Notice for Non-Department Heads */}
       {!canEdit && (

@@ -40,3 +40,72 @@
 .read-the-docs {
   color: #888;
 }
+
+/* Add this to your src/App.css or create a new CSS file */
+
+/* Video background container */
+.video-background {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  z-index: 0;
+}
+
+.video-background video {
+  min-width: 100%;
+  min-height: 100%;
+  width: auto;
+  height: auto;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  object-fit: cover;
+}
+
+/* Fallback gradient for when video doesn't load */
+.gradient-fallback {
+  background: linear-gradient(135deg, #7f1d1d 0%, #991b1b 35%, #b91c1c 100%);
+}
+
+/* Backdrop blur support for modern browsers */
+@supports (backdrop-filter: blur(10px)) {
+  .backdrop-blur-login {
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+}
+
+/* Animation for login form */
+.login-form-enter {
+  animation: slideIn 0.6s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Mobile responsiveness for video */
+@media (max-width: 768px) {
+  .video-background video {
+    /* On mobile, we might want to show a static image instead */
+    display: none;
+  }
+  
+  .mobile-background {
+    background-image: url('/images/campus-mobile.jpg');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+  }
+}
