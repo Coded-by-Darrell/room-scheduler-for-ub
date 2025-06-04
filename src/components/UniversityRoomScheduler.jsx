@@ -1,8 +1,12 @@
+// src/components/UniversityRoomScheduler.jsx
 import React, { useState, useEffect } from 'react';
 import { database } from '../firebase.js';
 import { ref, get, set, remove, onValue } from 'firebase/database';
 
-const UniversityRoomScheduler = () => {
+const UniversityRoomScheduler = ({ user, onLogout }) => {
+  // Check if user has editing permissions (only department heads)
+  const canEdit = user.role === 'department_head';
+  
   // State management
   const [selectedBuilding, setSelectedBuilding] = useState(null);
   const [selectedFloor, setSelectedFloor] = useState(null);
@@ -17,7 +21,6 @@ const UniversityRoomScheduler = () => {
     endTime: ''
   });
   const [schedule, setSchedule] = useState({});
-  const [user, setUser] = useState('Engr. Pablo Asi');
   const [loading, setLoading] = useState(false);
   const [showConflictModal, setShowConflictModal] = useState(false);
   const [conflictData, setConflictData] = useState(null);
@@ -45,7 +48,7 @@ const UniversityRoomScheduler = () => {
   }
 
   // Days of the week
-  const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
   // Helper function to get all time slots a class occupies
   const getOccupiedTimeSlots = (startTime, endTime) => {
@@ -198,8 +201,10 @@ const UniversityRoomScheduler = () => {
     return endHour - startHour;
   };
 
-  // Handle table cell click for editing
+  // Handle table cell click for editing (only for department heads)
   const handleCellClick = (day, time, roomId) => {
+    if (!canEdit) return; // Prevent editing for non-department heads
+    
     const occupiedInfo = isTimeSlotOccupied(roomId, day, time);
     if (occupiedInfo) {
       const { classInfo } = occupiedInfo;
@@ -231,25 +236,25 @@ const UniversityRoomScheduler = () => {
     setEditingSchedule(null);
   };
 
-  // Delete schedule
+  // Delete schedule (only for department heads)
   const handleDeleteSchedule = async () => {
-    if (editingSchedule) {
-      // Remove from local schedule
-      const newSchedule = { ...schedule };
-      if (newSchedule[editingSchedule.roomId]) {
-        delete newSchedule[editingSchedule.roomId][editingSchedule.originalTimeSlot];
-        // If no bookings remain for that room, remove room key
-        if (Object.keys(newSchedule[editingSchedule.roomId]).length === 0) {
-          delete newSchedule[editingSchedule.roomId];
-        }
+    if (!canEdit || !editingSchedule) return;
+    
+    // Remove from local schedule
+    const newSchedule = { ...schedule };
+    if (newSchedule[editingSchedule.roomId]) {
+      delete newSchedule[editingSchedule.roomId][editingSchedule.originalTimeSlot];
+      // If no bookings remain for that room, remove room key
+      if (Object.keys(newSchedule[editingSchedule.roomId]).length === 0) {
+        delete newSchedule[editingSchedule.roomId];
       }
-      setSchedule(newSchedule);
-      await saveSchedulesToFirebase(newSchedule);
-
-      // Reset form and editing state
-      handleCancelEditing();
-      alert('Schedule deleted successfully!');
     }
+    setSchedule(newSchedule);
+    await saveSchedulesToFirebase(newSchedule);
+
+    // Reset form and editing state
+    handleCancelEditing();
+    alert('Schedule deleted successfully!');
   };
 
   // Check for schedule conflicts
@@ -329,7 +334,7 @@ const UniversityRoomScheduler = () => {
       saveSchedulesToFirebase(newSchedule).then(() => {
         proceedWithScheduling();
         
-        // ADD THIS: Close modal and redirect to home after replacing
+        // Close modal and redirect to home after replacing
         setShowConflictModal(false);
         setConflictData(null);
         setSelectedBuilding(null);
@@ -347,8 +352,10 @@ const UniversityRoomScheduler = () => {
     }
   };
 
-  // Handle room scheduling
+  // Handle room scheduling (only for department heads)
   const handleScheduleRoom = async () => {
+    if (!canEdit) return;
+    
     if (!selectedBuilding || !selectedFloor || !selectedRoom ||
       !courseData.courseName || !courseData.section || !courseData.professorName ||
       !courseData.day || !courseData.startTime || !courseData.endTime) {
@@ -402,6 +409,8 @@ const UniversityRoomScheduler = () => {
 
   // Handle form input changes
   const handleInputChange = (e) => {
+    if (!canEdit) return;
+    
     const { name, value } = e.target;
     setCourseData(prev => ({
       ...prev,
@@ -414,28 +423,68 @@ const UniversityRoomScheduler = () => {
     ? `${selectedBuilding}${selectedFloor}0${selectedRoom}`
     : null;
 
+  // Get role display text
+  const getRoleDisplayText = (role) => {
+    switch (role) {
+      case 'department_head':
+        return 'Department Head';
+      case 'faculty':
+        return 'Faculty';
+      case 'student':
+        return 'Student';
+      default:
+        return role;
+    }
+  };
+
   return (
     <div className="flex flex-col min-h-screen">
       {/* Header */}
       <header className="bg-red-900 text-white p-4 flex justify-between items-center">
         <div className="flex items-center">
-        <div className="rounded-full w-20 h-20 bg-white flex items-center justify-center">
+          <div className="rounded-full w-20 h-20 bg-white flex items-center justify-center">
             <img src="/src/assets/UBlogo.png" alt="Profile" className="w-full h-full object-cover rounded-full" />
+          </div>
         </div>
-
-        </div>
-        <div className="relative">
-          <button className="bg-white text-black py-2 px-4 rounded flex items-center">
-            {user}
-            <svg className="ml-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
+        <div className="flex items-center space-x-4">
+          {/* User Info */}
+          <div className="text-right">
+            <div className="text-white font-medium">{user.name}</div>
+            <div className="text-red-200 text-sm">{getRoleDisplayText(user.role)}</div>
+          </div>
+          {/* Logout Button */}
+          <button
+            onClick={onLogout}
+            className="bg-red-700 hover:bg-red-600 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200 flex items-center"
+          >
+            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path>
             </svg>
+            Logout
           </button>
         </div>
       </header>
 
+      {/* Access Level Notice for Non-Department Heads */}
+      {!canEdit && (
+        <div className="bg-blue-50 border-l-4 border-blue-400 p-4">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <p className="text-sm text-blue-700">
+                <strong>Read-Only Access:</strong> You can view all room schedules, but only Department Heads can add, edit, or delete schedules.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Conflict Modal */}
-      {showConflictModal && (
+      {showConflictModal && canEdit && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-lg shadow-xl max-w-md w-full mx-4">
             <h3 className="text-lg font-bold mb-4 text-red-900">Room Already Occupied</h3>
@@ -485,7 +534,9 @@ const UniversityRoomScheduler = () => {
           {/* Title */}
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold text-red-900">University Room Scheduler</h1>
-            <p className="text-gray-600">Efficient room assignment for professors</p>
+            <p className="text-gray-600">
+              {canEdit ? 'Efficient room assignment for professors' : 'View room schedules and availability'}
+            </p>
           </div>
 
           {/* Building Selection */}
@@ -602,9 +653,23 @@ const UniversityRoomScheduler = () => {
                             return (
                               <td
                                 key={`${day}-${time}`}
-                                className="border p-2 cursor-pointer hover:bg-gray-50"
+                                className={`border p-2 transition-colors ${
+                                  canEdit 
+                                    ? 'cursor-pointer hover:bg-gray-50' 
+                                    : occupiedInfo 
+                                      ? 'bg-blue-50' 
+                                      : ''
+                                }`}
                                 onClick={() => handleCellClick(day, time, roomId)}
-                                title={occupiedInfo ? "Click to edit this schedule" : ""}
+                                title={
+                                  occupiedInfo 
+                                    ? canEdit 
+                                      ? "Click to edit this schedule" 
+                                      : "Schedule occupied"
+                                    : canEdit 
+                                      ? "Click to add a schedule" 
+                                      : ""
+                                }
                                 rowSpan={occupiedInfo ? getClassRowSpan(occupiedInfo.classInfo) : 1}
                               >
                                 {occupiedInfo && (
@@ -625,99 +690,99 @@ const UniversityRoomScheduler = () => {
                 </div>
               </div>
 
-              
-              {/* Schedule Form */}
-              <div className="bg-white p-6 rounded-lg shadow-md">
-                <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-xl font-bold">
-                    {editingSchedule ? 'Edit' : 'Schedule'} Room {roomIdToDisplay}
-                  </h2>
-                  {editingSchedule && (
-                    <button
-                      onClick={handleDeleteSchedule}
-                      className="bg-red-600 text-white px-3 py-1 rounded text-sm hover:bg-red-700"
-                    >
-                      Delete
-                    </button>
-                  )}
-                </div>
-                <div className="space-y-4">
-                  <div className="grid grid-cols-4 gap-4 items-center">
-                    <label className="text-sm font-medium text-gray-700 text-left">Course Name:</label>
-                    <input
-                      type="text"
-                      name="courseName"
-                      value={courseData.courseName}
-                      onChange={handleInputChange}
-                      placeholder="e.g. Introduction to Programming"
-                      className="col-span-3 p-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    />
+              {/* Schedule Form - Only show for Department Heads */}
+              {canEdit ? (
+                <div className="bg-white p-6 rounded-lg shadow-md">
+                  <div className="flex justify-between items-center mb-4">
+                    <h2 className="text-xl font-bold">
+                      {editingSchedule ? 'Edit' : 'Schedule'} Room {roomIdToDisplay}
+                    </h2>
+                    {editingSchedule && (
+                      <button
+                        onClick={handleDeleteSchedule}
+                        className="bg-red-600 text-white px-3 py-1 rounded text-sm hover:bg-red-700"
+                      >
+                        Delete
+                      </button>
+                    )}
                   </div>
-                  <div className="grid grid-cols-4 gap-4 items-center">
-                    <label className="text-sm font-medium text-gray-700 text-left">Section:</label>
-                    <input
-                      type="text"
-                      name="section"
-                      value={courseData.section}
-                      onChange={handleInputChange}
-                      placeholder="e.g. CpE 3-1"
-                      className="col-span-3 p-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    />
-                  </div>
-                  <div className="grid grid-cols-4 gap-4 items-center">
-                    <label className="text-sm font-medium text-gray-700 text-left">Professor Name:</label>
-                    <input
-                      type="text"
-                      name="professorName"
-                      value={courseData.professorName}
-                      onChange={handleInputChange}
-                      placeholder="e.g. Engr. Juan Dela Cruz"
-                      className="col-span-3 p-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    />
-                  </div>
-                  <div className="grid grid-cols-4 gap-4 items-center">
-                    <label className="text-sm font-medium text-gray-700 text-left">Day of Week:</label>
-                    <select
-                      name="day"
-                      value={courseData.day}
-                      onChange={handleInputChange}
-                      className="col-span-3 p-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    >
-                      <option value="">Select day</option>
-                      {daysOfWeek.map(day => (
-                        <option key={day} value={day}>{day}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="grid grid-cols-4 gap-4 items-center">
-                    <label className="text-sm font-medium text-gray-700 text-left">Start Time:</label>
-                    <select
-                      name="startTime"
-                      value={courseData.startTime}
-                      onChange={handleInputChange}
-                      className="col-span-3 p-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    >
-                      <option value="">Start time</option>
-                      {timeSlots.map(time => (
-                        <option key={time} value={time}>{time}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="grid grid-cols-4 gap-4 items-center">
-                    <label className="text-sm font-medium text-gray-700 text-left">End Time:</label>
-                    <select
-                      name="endTime"
-                      value={courseData.endTime}
-                      onChange={handleInputChange}
-                      className="col-span-3 p-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    >
-                      <option value="">End time</option>
-                      {timeSlots.map(time => (
-                        <option key={time} value={time}>{time}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="flex space-x-2">
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-4 gap-4 items-center">
+                      <label className="text-sm font-medium text-gray-700 text-left">Course Name:</label>
+                      <input
+                        type="text"
+                        name="courseName"
+                        value={courseData.courseName}
+                        onChange={handleInputChange}
+                        placeholder="e.g. Introduction to Programming"
+                        className="col-span-3 p-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+                    <div className="grid grid-cols-4 gap-4 items-center">
+                      <label className="text-sm font-medium text-gray-700 text-left">Section:</label>
+                      <input
+                        type="text"
+                        name="section"
+                        value={courseData.section}
+                        onChange={handleInputChange}
+                        placeholder="e.g. CpE 3-1"
+                        className="col-span-3 p-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+                    <div className="grid grid-cols-4 gap-4 items-center">
+                      <label className="text-sm font-medium text-gray-700 text-left">Professor Name:</label>
+                      <input
+                        type="text"
+                        name="professorName"
+                        value={courseData.professorName}
+                        onChange={handleInputChange}
+                        placeholder="e.g. Engr. Juan Dela Cruz"
+                        className="col-span-3 p-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+                    <div className="grid grid-cols-4 gap-4 items-center">
+                      <label className="text-sm font-medium text-gray-700 text-left">Day of Week:</label>
+                      <select
+                        name="day"
+                        value={courseData.day}
+                        onChange={handleInputChange}
+                        className="col-span-3 p-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="">Select day</option>
+                        {daysOfWeek.map(day => (
+                          <option key={day} value={day}>{day}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="grid grid-cols-4 gap-4 items-center">
+                      <label className="text-sm font-medium text-gray-700 text-left">Start Time:</label>
+                      <select
+                        name="startTime"
+                        value={courseData.startTime}
+                        onChange={handleInputChange}
+                        className="col-span-3 p-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="">Start time</option>
+                        {timeSlots.map(time => (
+                          <option key={time} value={time}>{time}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="grid grid-cols-4 gap-4 items-center">
+                      <label className="text-sm font-medium text-gray-700 text-left">End Time:</label>
+                      <select
+                        name="endTime"
+                        value={courseData.endTime}
+                        onChange={handleInputChange}
+                        className="col-span-3 p-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="">End time</option>
+                        {timeSlots.map(time => (
+                          <option key={time} value={time}>{time}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="flex space-x-2">
                       <button
                         onClick={handleScheduleRoom}
                         disabled={loading}
@@ -739,8 +804,44 @@ const UniversityRoomScheduler = () => {
                         </button>
                       )}
                     </div>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                // Information panel for read-only users
+                <div className="bg-white p-6 rounded-lg shadow-md">
+                  <h2 className="text-xl font-bold mb-4">Room Information</h2>
+                  <div className="space-y-4">
+                    <div className="bg-gray-50 p-4 rounded-lg">
+                      <h3 className="font-semibold text-gray-800 mb-2">Current Room: {roomIdToDisplay}</h3>
+                      <p className="text-gray-600 text-sm">
+                        Building {selectedBuilding}, Floor {selectedFloor}, Room {selectedRoom}
+                      </p>
+                    </div>
+                    
+                    <div className="bg-blue-50 p-4 rounded-lg">
+                      <h3 className="font-semibold text-blue-800 mb-2">Legend</h3>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex items-center">
+                          <div className="w-4 h-4 bg-blue-100 border mr-2"></div>
+                          <span className="text-gray-700">Occupied time slot</span>
+                        </div>
+                        <div className="flex items-center">
+                          <div className="w-4 h-4 bg-white border mr-2"></div>
+                          <span className="text-gray-700">Available time slot</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="bg-yellow-50 p-4 rounded-lg">
+                      <h3 className="font-semibold text-yellow-800 mb-2">Access Level</h3>
+                      <p className="text-yellow-700 text-sm">
+                        As a {getRoleDisplayText(user.role).toLowerCase()}, you have read-only access to view schedules. 
+                        Contact your Department Head to make schedule changes.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
