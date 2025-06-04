@@ -518,52 +518,52 @@ const UniversityRoomScheduler = ({ user, onLogout }) => {
     <div className="flex flex-col min-h-screen">
       {/* Header */}
       <header className="bg-red-900 text-white p-4 flex justify-between items-center">
-        <div className="flex items-center">
-          <div className="rounded-full w-20 h-20 bg-white flex items-center justify-center">
-            <img src="/src/assets/UBlogo.png" alt="Profile" className="w-full h-full object-cover rounded-full" />
-          </div>
-        </div>
-        <div className="flex items-center space-x-4">
-          {/* Department Head Menu */}
-          {canEdit && (
-            <div className="flex space-x-2">
-              <button
-                onClick={() => setShowCreateDeptHeadModal(true)}
-                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200 flex items-center"
-              >
-                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                </svg>
-                Create Dept Head
-              </button>
-              <button
-                onClick={() => setCurrentPage('user-management')}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200 flex items-center"
-              >
-                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
-                </svg>
-                Manage Users
-              </button>
-            </div>
-          )}
-          
-          {/* User Info */}
-          <div className="text-right">
-            <div className="text-white font-medium">{user.name}</div>
-            <div className="text-red-200 text-sm">{getRoleDisplayText(user.role)}</div>
-          </div>
-          {/* Logout Button */}
-          <button
-            onClick={onLogout}
-            className="bg-red-700 hover:bg-red-600 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200 flex items-center"
-          >
-            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path>
-            </svg>
-            Logout
-          </button>
-        </div>
+  <div className="flex items-center">
+    <div className="rounded-full w-20 h-20 bg-white flex items-center justify-center">
+      <img src="/src/assets/UBlogo.png" alt="Profile" className="w-full h-full object-cover rounded-full" />
+    </div>
+  </div>
+  <div className="flex items-center space-x-4">
+    {/* Department Head Icon Actions */}
+    {canEdit && (
+      <div className="flex space-x-2">
+        <button
+          onClick={() => setShowCreateDeptHeadModal(true)}
+          className="text-white hover:text-red-200 p-3 rounded-md transition-colors duration-200 flex items-center justify-center"
+          title="Create Department Head"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+          </svg>
+        </button>
+        <button
+          onClick={() => setCurrentPage('user-management')}
+          className="text-white hover:text-red-200 p-3 rounded-md transition-colors duration-200 flex items-center justify-center"
+          title="Manage Users"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
+          </svg>
+        </button>
+      </div>
+    )}
+    
+    {/* User Info */}
+    <div className="text-right">
+      <div className="text-white font-medium">{user.name}</div>
+      <div className="text-red-200 text-sm">{getRoleDisplayText(user.role)}</div>
+    </div>
+    {/* Logout Button */}
+    <button
+      onClick={onLogout}
+      className="bg-red-700 hover:bg-red-600 text-white p-3 rounded-md transition-colors duration-200 flex items-center justify-center"
+      title="Logout"
+    >
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path>
+      </svg>
+    </button>
+  </div>
       </header>
 
       {/* Create Department Head Modal */}
