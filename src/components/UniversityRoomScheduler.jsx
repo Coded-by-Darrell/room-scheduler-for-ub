@@ -1,4 +1,4 @@
-// src/components/UniversityRoomScheduler.jsx
+
 import React, { useState, useEffect } from 'react';
 import { database } from '../firebase.js';
 import { ref, get, set, remove, onValue } from 'firebase/database';
@@ -59,68 +59,72 @@ const UniversityRoomScheduler = ({ user, onLogout }) => {
   const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
   // Handle creating new department head
-  const handleCreateDeptHead = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setCreateError('');
+  // Improved handleCreateDeptHead function for UniversityRoomScheduler.jsx
+// Replace the existing handleCreateDeptHead function with this improved version
 
-    try {
-      // Get existing users from localStorage
-      const storedUsers = localStorage.getItem('systemUsers');
-      let users = storedUsers ? JSON.parse(storedUsers) : [];
+const handleCreateDeptHead = async (e) => {
+  e.preventDefault();
+  setLoading(true);
+  setCreateError('');
 
-      // Check if username already exists
-      const existingUser = users.find(u => u.username === newDeptHead.username);
-      if (existingUser) {
-        setCreateError('Username already exists');
-        setLoading(false);
-        return;
-      }
+  try {
+    // Get existing users from localStorage
+    const storedUsers = localStorage.getItem('systemUsers');
+    let users = storedUsers ? JSON.parse(storedUsers) : [];
 
-      // Create new department head
-      const userToAdd = {
-        id: Date.now(),
-        username: newDeptHead.username,
-        name: newDeptHead.name,
-        role: 'department_head',
-        createdAt: new Date().toISOString(),
-        createdBy: user.username
-      };
-
-      // Add to users array
-      users.push(userToAdd);
-      localStorage.setItem('systemUsers', JSON.stringify(users));
-
-      // Also update the mock users for login (this would be handled by your backend in production)
-      const mockUsersKey = 'mockUsers';
-      let mockUsers = {};
-      try {
-        const stored = localStorage.getItem(mockUsersKey);
-        mockUsers = stored ? JSON.parse(stored) : {};
-      } catch (e) {
-        mockUsers = {};
-      }
-
-      mockUsers[newDeptHead.username] = {
-        password: newDeptHead.password,
-        role: 'department_head',
-        name: newDeptHead.name
-      };
-
-      localStorage.setItem(mockUsersKey, JSON.stringify(mockUsers));
-
-      // Reset form and close modal
-      setNewDeptHead({ username: '', password: '', name: '' });
-      setShowCreateDeptHeadModal(false);
-      
-      alert(`Department Head account created successfully for ${newDeptHead.name}!`);
-      
-    } catch (error) {
-      setCreateError('Error creating department head account: ' + error.message);
-    } finally {
+    // Check if username already exists in systemUsers
+    const existingUser = users.find(u => u.username === newDeptHead.username);
+    if (existingUser) {
+      setCreateError('Username already exists');
       setLoading(false);
+      return;
     }
-  };
+
+    // Also check in mockUsers to ensure no duplicates
+    const storedMockUsers = localStorage.getItem('mockUsers');
+    let mockUsers = storedMockUsers ? JSON.parse(storedMockUsers) : {};
+    
+    if (mockUsers[newDeptHead.username]) {
+      setCreateError('Username already exists');
+      setLoading(false);
+      return;
+    }
+
+    // Create new department head for systemUsers
+    const userToAdd = {
+      id: Date.now(),
+      username: newDeptHead.username,
+      name: newDeptHead.name,
+      role: 'department_head',
+      createdAt: new Date().toISOString(),
+      createdBy: user.username
+    };
+
+    // Add to users array
+    users.push(userToAdd);
+    localStorage.setItem('systemUsers', JSON.stringify(users));
+
+    // Add to mockUsers for login functionality
+    mockUsers[newDeptHead.username] = {
+      password: newDeptHead.password,
+      role: 'department_head',
+      name: newDeptHead.name
+    };
+
+    localStorage.setItem('mockUsers', JSON.stringify(mockUsers));
+
+    // Reset form and close modal
+    setNewDeptHead({ username: '', password: '', name: '' });
+    setShowCreateDeptHeadModal(false);
+    
+    alert(`Department Head account created successfully for ${newDeptHead.name}!\n\nLogin credentials:\nUsername: ${newDeptHead.username}\nPassword: ${newDeptHead.password}`);
+    
+  } catch (error) {
+    setCreateError('Error creating department head account: ' + error.message);
+  } finally {
+    setLoading(false);
+  }
+};
 
   // Helper function to get all time slots a class occupies
   const getOccupiedTimeSlots = (startTime, endTime) => {

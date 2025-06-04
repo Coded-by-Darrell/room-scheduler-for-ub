@@ -1,5 +1,5 @@
-// src/components/Login.jsx
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 
 const Login = ({ onLogin }) => {
   const [credentials, setCredentials] = useState({
@@ -9,20 +9,41 @@ const Login = ({ onLogin }) => {
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [mockUsers, setMockUsers] = useState({});
 
-  // Mock user database - In production, this would be in your Firebase
-  const mockUsers = {
-    // Department Heads
-    'dept.head': { password: 'depthead123', role: 'department_head', name: 'ENGR. Pablo Asi' },
-    'admin': { password: 'admin123', role: 'department_head', name: 'Admin User' },
-    
-    // Students
-    'student1': { password: 'student123', role: 'student', name: 'Darrell C. Ocampo' },
-    'student2': { password: 'student123', role: 'student', name: 'Maria Clara' },
-    
-    // Faculty
-    'faculty1': { password: 'faculty123', role: 'faculty', name: 'ENGR. Derrick Ramos' },
-    'faculty2': { password: 'faculty123', role: 'faculty', name: 'Prof. Andres Bonifacio' },
+  // Load users when component mounts
+  useEffect(() => {
+    loadUsers();
+  }, []);
+
+  const loadUsers = () => {
+    // Default hardcoded users
+    const defaultUsers = {
+      // Department Heads
+      'dept.head': { password: 'depthead123', role: 'department_head', name: 'ENGR. Pablo Asi' },
+      'admin': { password: 'admin123', role: 'department_head', name: 'Admin User' },
+      
+      // Students
+      'student1': { password: 'student123', role: 'student', name: 'Darrell C. Ocampo' },
+      'student2': { password: 'student123', role: 'student', name: 'Maria Clara' },
+      
+      // Faculty
+      'faculty1': { password: 'faculty123', role: 'faculty', name: 'ENGR. Derrick Ramos' },
+      'faculty2': { password: 'faculty123', role: 'faculty', name: 'Prof. Andres Bonifacio' },
+    };
+
+    // Load additional users from localStorage
+    try {
+      const storedMockUsers = localStorage.getItem('mockUsers');
+      const additionalUsers = storedMockUsers ? JSON.parse(storedMockUsers) : {};
+      
+      // Merge default users with stored users
+      const allUsers = { ...defaultUsers, ...additionalUsers };
+      setMockUsers(allUsers);
+    } catch (error) {
+      console.error('Error loading users from localStorage:', error);
+      setMockUsers(defaultUsers);
+    }
   };
 
   const handleInputChange = (e) => {
@@ -163,8 +184,6 @@ const Login = ({ onLogin }) => {
             </button>
           </div>
 
-        
-           
           
         </form>
       </div>

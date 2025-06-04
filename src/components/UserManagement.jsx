@@ -1,4 +1,4 @@
-// src/components/UserManagement.jsx
+
 import React, { useState, useEffect } from 'react';
 import { database } from '../firebase';
 import { ref, get, set, remove } from 'firebase/database';
@@ -29,8 +29,8 @@ const UserManagement = ({ user, onBack }) => {
       // Initialize with default users
       const defaultUsers = [
         { id: 1, username: 'admin', name: 'Admin User', role: 'department_head', createdAt: new Date().toISOString() },
-        { id: 2, username: 'dept.head', name: 'Dr. Maria Santos', role: 'department_head', createdAt: new Date().toISOString() },
-        { id: 3, username: 'faculty1', name: 'Prof. Jose Rizal', role: 'faculty', createdAt: new Date().toISOString() },
+        { id: 2, username: 'dept.head', name: 'Engr. Pablo Asi', role: 'department_head', createdAt: new Date().toISOString() },
+        { id: 3, username: 'faculty1', name: 'Prof. Juan Dela Cruz', role: 'faculty', createdAt: new Date().toISOString() },
         { id: 4, username: 'faculty2', name: 'Prof. Andres Bonifacio', role: 'faculty', createdAt: new Date().toISOString() },
         { id: 5, username: 'student1', name: 'Juan Dela Cruz', role: 'student', createdAt: new Date().toISOString() },
         { id: 6, username: 'student2', name: 'Maria Clara', role: 'student', createdAt: new Date().toISOString() },
@@ -46,7 +46,7 @@ const UserManagement = ({ user, onBack }) => {
     setError('');
 
     try {
-      // Check if username already exists
+      // Check if username already exists in systemUsers
       const existingUser = users.find(u => u.username === newUser.username);
       if (existingUser) {
         setError('Username already exists');
@@ -54,15 +54,38 @@ const UserManagement = ({ user, onBack }) => {
         return;
       }
 
+      // Also check in mockUsers to ensure no duplicates
+      const storedMockUsers = localStorage.getItem('mockUsers');
+      let mockUsers = storedMockUsers ? JSON.parse(storedMockUsers) : {};
+      
+      if (mockUsers[newUser.username]) {
+        setError('Username already exists in login system');
+        setLoading(false);
+        return;
+      }
+
+      // Create user for systemUsers (user management)
       const userToAdd = {
         id: Date.now(),
-        ...newUser,
-        createdAt: new Date().toISOString()
+        username: newUser.username,
+        name: newUser.name,
+        role: newUser.role,
+        createdAt: new Date().toISOString(),
+        createdBy: user.username
       };
 
+      // Update systemUsers
       const updatedUsers = [...users, userToAdd];
       setUsers(updatedUsers);
       localStorage.setItem('systemUsers', JSON.stringify(updatedUsers));
+
+      // Add to mockUsers for login functionality
+      mockUsers[newUser.username] = {
+        password: newUser.password,
+        role: newUser.role,
+        name: newUser.name
+      };
+      localStorage.setItem('mockUsers', JSON.stringify(mockUsers));
 
       // Reset form
       setNewUser({
@@ -72,6 +95,8 @@ const UserManagement = ({ user, onBack }) => {
         role: 'student'
       });
       setShowAddUser(false);
+
+      alert(`User account created successfully!\n\nLogin credentials:\nUsername: ${newUser.username}\nPassword: ${newUser.password}\nRole: ${newUser.role}`);
       
     } catch (error) {
       setError('Error adding user: ' + error.message);
@@ -82,18 +107,60 @@ const UserManagement = ({ user, onBack }) => {
 
   const handleDeleteUser = (userId) => {
     if (window.confirm('Are you sure you want to delete this user?')) {
-      const updatedUsers = users.filter(u => u.id !== userId);
-      setUsers(updatedUsers);
-      localStorage.setItem('systemUsers', JSON.stringify(updatedUsers));
+      // Find the user to get username
+      const userToDelete = users.find(u => u.id === userId);
+      
+      if (userToDelete) {
+        // Remove from systemUsers
+        const updatedUsers = users.filter(u => u.id !== userId);
+        setUsers(updatedUsers);
+        localStorage.setItem('systemUsers', JSON.stringify(updatedUsers));
+
+        // Remove from mockUsers (login system)
+        try {
+          const storedMockUsers = localStorage.getItem('mockUsers');
+          let mockUsers = storedMockUsers ? JSON.parse(storedMockUsers) : {};
+          
+          if (mockUsers[userToDelete.username]) {
+            delete mockUsers[userToDelete.username];
+            localStorage.setItem('mockUsers', JSON.stringify(mockUsers));
+          }
+        } catch (error) {
+          console.error('Error removing user from login system:', error);
+        }
+
+        alert(`User ${userToDelete.name} has been deleted successfully.`);
+      }
     }
   };
 
   const handleRoleChange = (userId, newRole) => {
-    const updatedUsers = users.map(u => 
-      u.id === userId ? { ...u, role: newRole } : u
-    );
-    setUsers(updatedUsers);
-    localStorage.setItem('systemUsers', JSON.stringify(updatedUsers));
+    // Find the user to get username
+    const userToUpdate = users.find(u => u.id === userId);
+    
+    if (userToUpdate) {
+      // Update systemUsers
+      const updatedUsers = users.map(u => 
+        u.id === userId ? { ...u, role: newRole } : u
+      );
+      setUsers(updatedUsers);
+      localStorage.setItem('systemUsers', JSON.stringify(updatedUsers));
+
+      // Update mockUsers (login system)
+      try {
+        const storedMockUsers = localStorage.getItem('mockUsers');
+        let mockUsers = storedMockUsers ? JSON.parse(storedMockUsers) : {};
+        
+        if (mockUsers[userToUpdate.username]) {
+          mockUsers[userToUpdate.username].role = newRole;
+          localStorage.setItem('mockUsers', JSON.stringify(mockUsers));
+        }
+      } catch (error) {
+        console.error('Error updating user role in login system:', error);
+      }
+
+      alert(`${userToUpdate.name}'s role has been updated to ${getRoleDisplayName(newRole)}.`);
+    }
   };
 
   const getRoleColor = (role) => {
@@ -187,6 +254,7 @@ const UserManagement = ({ user, onBack }) => {
                       value={newUser.username}
                       onChange={(e) => setNewUser({...newUser, username: e.target.value})}
                       className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-red-500 focus:border-red-500"
+                      placeholder="Enter username"
                     />
                   </div>
                   <div>
@@ -197,6 +265,7 @@ const UserManagement = ({ user, onBack }) => {
                       value={newUser.name}
                       onChange={(e) => setNewUser({...newUser, name: e.target.value})}
                       className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-red-500 focus:border-red-500"
+                      placeholder="Enter full name"
                     />
                   </div>
                   <div>
@@ -207,6 +276,7 @@ const UserManagement = ({ user, onBack }) => {
                       value={newUser.password}
                       onChange={(e) => setNewUser({...newUser, password: e.target.value})}
                       className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-red-500 focus:border-red-500"
+                      placeholder="Enter password"
                     />
                   </div>
                   <div>
@@ -220,6 +290,11 @@ const UserManagement = ({ user, onBack }) => {
                       <option value="faculty">Faculty</option>
                       <option value="department_head">Department Head</option>
                     </select>
+                  </div>
+                  <div className="bg-blue-50 p-3 rounded-md">
+                    <p className="text-sm text-blue-700">
+                      <strong>Note:</strong> The user will be able to log in immediately with these credentials.
+                    </p>
                   </div>
                   <div className="flex gap-3 pt-4">
                     <button
